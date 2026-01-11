@@ -250,44 +250,6 @@ async def proxy_search_get(request: Request):
             logger.error(f"GET请求 - 过滤结果时发生错误: {str(e)}")
             raise HTTPException(status_code=500, detail=f"处理搜索结果时发生错误: {str(e)}")
 
-@app.get("/api/pansou")
-async def pansou_api(request: Request):
-    """pansou接口，直接透传请求"""
-    params = dict(request.query_params)
-    
-    async with httpx.AsyncClient(timeout=60.0, headers={"Content-Type": "application/json; charset=utf-8"}) as client:
-        try:
-            search_res = await client.get(f"{SEARCH_API_URL}/api/pansou", params=params)
-            search_res.raise_for_status()  # 确保HTTP状态码正常
-            
-            # 尝试处理响应内容
-            try:
-                # 先获取文本内容，再解析为JSON，以确保正确的字符编码处理
-                content = search_res.text
-                import json
-                search_data = json.loads(content)
-            except Exception as e:
-                # 如果JSON解析失败，尝试获取文本内容
-                try:
-                    content = search_res.text
-                    logger.warning(f"pansou API返回的内容不是有效的JSON: {content[:500]}...")
-                    raise HTTPException(status_code=500, detail="pansou API返回的内容格式错误")
-                except Exception:
-                    # 如果文本也获取失败，记录原始响应
-                    logger.error(f"无法解析pansou API响应: {search_res.content}")
-                    raise HTTPException(status_code=500, detail="pansou API返回的内容无法解析")
-            
-            return search_data
-        except httpx.ConnectError:
-            logger.error(f"无法连接到pansou API: {SEARCH_API_URL}")
-            raise HTTPException(status_code=503, detail=f"无法连接到pansou API: {SEARCH_API_URL}")
-        except httpx.TimeoutException:
-            logger.error("pansou API请求超时")
-            raise HTTPException(status_code=408, detail="pansou API请求超时")
-        except Exception as e:
-            logger.error(f"pansou API错误: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"pansou API错误: {str(e)}")
-
 
 @app.get("/api/health")
 async def health():
