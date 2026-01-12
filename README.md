@@ -1,4 +1,4 @@
-#重新编译支持ARM64，感谢不懂和L原作者。 docker pull douniwan819/pansou-pancheck:latest
+#重新编译支持ARM64，感谢不懂和L原作者。 douniwan819/pansou-pancheck:latest
 
 # PansouAndPanCheck
 
