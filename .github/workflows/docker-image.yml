@@ -1,0 +1,71 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches: [ master ] # 构建的分支，可以根据需要修改
+  pull_request:
+    branches: [ master ] # 触发构建的分支，可以根据需要修改
+  workflow_dispatch: # 添加 workflow_dispatch 事件，支持手动触发
+
+jobs:
+  build:
+    name: Push Docker image to multiple registries
+    runs-on: ubuntu-latest
+    # 显式声明权限，遵循最小权限原则
+    permissions:
+      packages: write # 推送镜像到 GHCR
+      contents: read  # 读取源码
+      attestations: write # 写入构建证明
+      id-token: write # OIDC 认证，用于签名
+    steps:
+      # 1. 检出代码
+      - name: Check out the repo
+        uses: actions/checkout@v4
+	  # 2. 安装 QEMU (支持 ARM64 等多架构)
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      # 3. 初始化 Buildx (使用 docker-container 驱动)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+	  # 4. 登录 Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      # 5. 登录 Registry
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # 6. 生成元数据 (Tags & Labels)
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            jumploop/webssh # Docker Hub仓库名称
+            ghcr.io/${{ github.repository }}
+          tags: |
+            latest
+            ${{ github.sha }}
+      # 7. 构建并推送 (核心步骤)
+      - name: Build and push Docker images
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+      # 8. 镜像签名与证明 (增强安全性)
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ghcr.io/${{ github.repository }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
