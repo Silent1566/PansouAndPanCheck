@@ -1,3 +1,5 @@
+#重新编译支持ARM64，感谢不懂和L原作者。 douniwan819/pansou-pancheck:latest
+
 # PansouAndPanCheck
 
 一个整合了 [pansou](https://github.com/fish2018/pansou) 搜索服务和 [PanCheck](https://github.com/Lampon/PanCheck) 链接有效性校验的代理服务。
